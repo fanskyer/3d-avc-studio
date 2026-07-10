@@ -26,6 +26,11 @@ an explicit decoder path:
 Users are responsible for making sure any decoder, codec, patent license, or
 third-party tool they use is legal for their jurisdiction and use case.
 
+The optional `Scripts/bootstrap_research_decoder.sh` script can build
+h264-tools/JM reference helpers locally under `Build/research-decoder/`. Those
+generated files are local research artifacts only. They are not committed and
+are not included in public release artifacts.
+
 ## Sponsor Model
 
 Development is supported by voluntary sponsorship. Suggested links:

@@ -1,6 +1,7 @@
 Build/
 Release/
 Vendor/LegacyEngine/
+Vendor/MVCDecoder/mvcdecoder
 *.xcarchive
 *.dSYM
 *.MTS

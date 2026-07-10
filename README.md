@@ -75,6 +75,17 @@ or build with an explicit path:
 Users are responsible for making sure any decoder, codec, patent license, or
 third-party tool they use is legal for their jurisdiction and use case.
 
+For research use, the repo includes an optional local bootstrap script:
+
+```bash
+./Scripts/bootstrap_research_decoder.sh
+```
+
+That script downloads and builds h264-tools/JM reference helpers under
+`Build/research-decoder/` on your Mac. The generated files are not committed,
+not bundled, and not included in public releases. The reference helper is useful
+for research and validation, but it is not shipped as a product decoder.
+
 ## Sponsorship
 
 If this helps recover old 3D footage, sponsorship is welcome:

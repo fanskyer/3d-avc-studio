@@ -46,10 +46,11 @@ else
 fi
 
 if [[ -x "$ROOT/Scripts/package_open_source_release.sh" &&
-      -x "$ROOT/Scripts/audit_open_source_release.sh" ]]; then
+      -x "$ROOT/Scripts/audit_open_source_release.sh" &&
+      -x "$ROOT/Scripts/bootstrap_research_decoder.sh" ]]; then
   ok "Open-source package/audit scripts are executable."
 else
-  blocker "Open-source package/audit scripts must be executable."
+  blocker "Open-source package/audit/bootstrap scripts must be executable."
 fi
 
 if grep -qi 'Apple Distribution' "$ROOT/README.md" ||
