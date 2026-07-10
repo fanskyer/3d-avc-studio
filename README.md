@@ -6,7 +6,7 @@ clips as side-by-side MP4.
 The first validation target is Sony HDR-TD10 footage, but the project is meant
 to be a general Sony 3D AVC / AVCHD 3D preservation tool.
 
-## Status
+## What This Preview Is
 
 This is an early open-source preview.
 
@@ -21,13 +21,56 @@ This is an early open-source preview.
 Because the preview does not ship an MVC decoder, full conversion may require a
 local decoder that you are legally allowed to use.
 
-## Download
+## Quick Start
 
-Use the latest GitHub Release preview build.
+1. Download the latest `3D-AVC-Studio-...open-source-preview...zip` from
+   GitHub Releases.
+2. Unzip it and open `3D AVC Studio.app`.
+3. If macOS warns about an unidentified developer, open it from Finder with
+   Control-click -> Open.
+4. Add `.MTS` or `.M2TS` clips from a Sony 3D AVC / AVCHD 3D camera.
+5. Leave the default settings unless you are testing a specific workflow:
+   `H.265 Fast Apple`, `60p`, and source-folder output.
 
-The app is intentionally distributed without patented/commercial decoder
-binaries. If macOS warns about an unidentified developer, open it from Finder
-with Control-click -> Open, or build from source.
+The Convert button may be disabled in the public preview because the app does
+not bundle an MVC decoder. That is expected. The preview is useful for testing
+the app shell, inspecting release state, and developing or validating a local
+decoder path.
+
+## Running The App
+
+- `Choose Files`: add one or more `.MTS` / `.M2TS` clips.
+- `Choose Folder`: add every supported clip from a folder.
+- `Output Folder`: choose a shared destination for converted files.
+- `Use Source Folders`: write each output next to its source clip.
+- `Support -> Copy Release Readiness`: copy the current decoder/release state.
+- `Save Diagnostics`: create a local text report for troubleshooting. The app
+  does not upload videos or diagnostics.
+
+Ordinary 2D AVCHD clips are skipped because they do not contain the dependent
+MVC view. Sony 3D AVC / AVCHD 3D clips should contain both the base AVC stream
+and the dependent MVC stream.
+
+## Research Decoder Bootstrap
+
+For research use, the repo includes an optional local bootstrap script:
+
+```bash
+./Scripts/bootstrap_research_decoder.sh
+```
+
+That script downloads and builds h264-tools/JM reference helpers under
+`Build/research-decoder/` on your Mac:
+
+```text
+Build/research-decoder/bin/ldecod
+Build/research-decoder/bin/naluparser
+Build/research-decoder/bin/yuvsbspipe
+```
+
+The generated files are not committed, not bundled, and not included in public
+releases. The reference helper is useful for research and validation, but it is
+not shipped as a product decoder.
 
 ## Build From Source
 
@@ -74,17 +117,6 @@ or build with an explicit path:
 
 Users are responsible for making sure any decoder, codec, patent license, or
 third-party tool they use is legal for their jurisdiction and use case.
-
-For research use, the repo includes an optional local bootstrap script:
-
-```bash
-./Scripts/bootstrap_research_decoder.sh
-```
-
-That script downloads and builds h264-tools/JM reference helpers under
-`Build/research-decoder/` on your Mac. The generated files are not committed,
-not bundled, and not included in public releases. The reference helper is useful
-for research and validation, but it is not shipped as a product decoder.
 
 ## Sponsorship
 
