@@ -1,0 +1,16 @@
+{
+  "decoder": {
+    "bundledInPreview": false,
+    "approvedImplementation": null,
+    "blockedImplementations": [
+      {
+        "name": "JM ldecod reference decoder from h264-tools",
+        "reason": "Reference-code notices do not provide patent rights for redistributable product binaries."
+      },
+      {
+        "name": "System or Homebrew dependency",
+        "reason": "Preview releases should be self-contained and should not require users to install command-line dependencies."
+      }
+    ]
+  }
+}

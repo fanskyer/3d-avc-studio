@@ -1,0 +1,8 @@
+Build/
+Release/
+Vendor/LegacyEngine/
+*.xcarchive
+*.dSYM
+*.MTS
+*.m2ts
+*_sbs*.mp4
