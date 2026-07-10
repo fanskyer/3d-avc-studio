@@ -482,7 +482,7 @@ struct Sony3DEngine {
             """
             {
               "engine": "sony3dengine",
-              "version": "0.1.0",
+              "version": "0.1.1",
               "profiles": ["sony-3d-avc", "sony-avchd-3d"],
               "codecs": ["h265-vt"],
               "transportExtractionComplete": true,
@@ -606,6 +606,15 @@ struct Sony3DEngine {
             if FileManager.default.isExecutableFile(atPath: url.path) {
                 return url
             }
+        }
+
+        let applicationSupport = FileManager.default.urls(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask
+        ).first?.appendingPathComponent("3D AVC Studio/mvcdecoder")
+        if let applicationSupport,
+           FileManager.default.isExecutableFile(atPath: applicationSupport.path) {
+            return applicationSupport
         }
 
         let engineURL = URL(fileURLWithPath: CommandLine.arguments[0]).standardizedFileURL

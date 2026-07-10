@@ -31,11 +31,13 @@ local decoder that you are legally allowed to use.
 4. Add `.MTS` or `.M2TS` clips from a Sony 3D AVC / AVCHD 3D camera.
 5. Leave the default settings unless you are testing a specific workflow:
    `H.265 Fast Apple`, `60p`, and source-folder output.
+6. Open `Decoder Setup...`, choose a legally usable MVC decoder, then press
+   `Test`. The app stores its private local copy in Application Support.
 
-The Convert button may be disabled in the public preview because the app does
-not bundle an MVC decoder. That is expected. The preview is useful for testing
-the app shell, inspecting release state, and developing or validating a local
-decoder path.
+The Convert button remains disabled until a decoder is installed. The public
+preview does not bundle one, but the setup screen makes its required command
+shape visible and installs a user-supplied decoder without asking the user to
+set an environment variable or rebuild the app.
 
 ## Running The App
 
@@ -43,6 +45,8 @@ decoder path.
 - `Choose Folder`: add every supported clip from a folder.
 - `Output Folder`: choose a shared destination for converted files.
 - `Use Source Folders`: write each output next to its source clip.
+- `Decoder Setup...`: install, test, or remove a local MVC decoder. The app
+  copies it into its own Application Support container; it does not upload it.
 - `Support -> Copy Release Readiness`: copy the current decoder/release state.
 - `Save Diagnostics`: create a local text report for troubleshooting. The app
   does not upload videos or diagnostics.

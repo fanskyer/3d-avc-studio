@@ -62,13 +62,16 @@ struct StudioView: View {
     @State private var logs = ""
     @State private var isRunning = false
     @State private var currentProcess: Process?
+    @State private var showingDecoderSetup = false
+    @State private var engineStatusRevision = UUID()
 
     private var appVersion: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "dev"
     }
 
     private var engineStatus: EngineStatus {
-        EngineStatus.detect()
+        _ = engineStatusRevision
+        return EngineStatus.detect()
     }
 
     var body: some View {
@@ -80,6 +83,11 @@ struct StudioView: View {
             queueAndLog
         }
         .background(Color(nsColor: .windowBackgroundColor))
+        .sheet(isPresented: $showingDecoderSetup) {
+            DecoderSetupView {
+                engineStatusRevision = UUID()
+            }
+        }
     }
 
     private var header: some View {
@@ -107,6 +115,9 @@ struct StudioView: View {
 
             releaseBadge
             engineBadge
+            Button("Decoder Setup...") {
+                showingDecoderSetup = true
+            }
             Button(isRunning ? "Cancel" : "Convert") {
                 isRunning ? cancel() : start()
             }
@@ -512,6 +523,8 @@ struct StudioView: View {
         - Store ready: \(status.isStoreReady)
         - Conversion complete: \(status.conversionComplete)
         - Bundled decoder: \(status.hasBundledDecoder)
+        - Local decoder: \(LocalDecoderStore.isInstalled)
+        - Local decoder location: \(LocalDecoderStore.displayLocation)
         - Decoder approved: \(status.decoderApproved)
         - Notices bundled: \(status.hasNotices)
         - Help: \(status.help)
@@ -611,6 +624,224 @@ struct StudioView: View {
             sanitized = String(sanitized.suffix(12_000))
         }
         return sanitized
+    }
+}
+
+struct DecoderSetupView: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var message = "No local MVC decoder is installed."
+    @State private var isInstalled = LocalDecoderStore.isInstalled
+    @State private var isWorking = false
+    let onChanged: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            HStack {
+                Label("MVC Decoder Setup", systemImage: "puzzlepiece.extension")
+                    .font(.title3.weight(.semibold))
+                Spacer()
+                statusLabel
+            }
+
+            Text("3D AVC Studio does not include an MVC decoder. Choose a decoder you are legally allowed to use and the app will keep a private copy for conversion.")
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Required decoder command")
+                    .font(.headline)
+                Text("mvcdecoder decode COMBINED_MVC.h264 LEFT.yuv RIGHT.yuv --width W --height H")
+                    .font(.system(.caption, design: .monospaced))
+                    .textSelection(.enabled)
+                    .padding(10)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color(nsColor: .textBackgroundColor))
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                Text("The decoder must write complete left/right YUV420p files. A raw h264-tools/JM ldecod binary does not use this command shape without an adapter.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Installed location")
+                    .font(.headline)
+                Text(LocalDecoderStore.displayLocation)
+                    .font(.system(.caption, design: .monospaced))
+                    .textSelection(.enabled)
+                    .lineLimit(2)
+                    .truncationMode(.middle)
+            }
+
+            Text(message)
+                .font(.callout)
+                .foregroundStyle(isInstalled ? .green : .secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            HStack {
+                Button("Choose Decoder...") { chooseDecoder() }
+                    .disabled(isWorking)
+                Button("Test") { testDecoder() }
+                    .disabled(isWorking || !isInstalled)
+                Button("Remove") { removeDecoder() }
+                    .disabled(isWorking || !isInstalled)
+                Spacer()
+                Button("Done") { dismiss() }
+                    .keyboardShortcut(.defaultAction)
+            }
+        }
+        .padding(24)
+        .frame(width: 620)
+        .onAppear { refreshStatus() }
+    }
+
+    private var statusLabel: some View {
+        Label(isInstalled ? "Installed" : "Not Installed", systemImage: isInstalled ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+            .foregroundStyle(isInstalled ? .green : .orange)
+    }
+
+    private func chooseDecoder() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = false
+        panel.prompt = "Install Decoder"
+        panel.message = "Choose an executable MVC decoder that implements the command shown here."
+        guard panel.runModal() == .OK, let source = panel.url else { return }
+
+        isWorking = true
+        defer { isWorking = false }
+        do {
+            try LocalDecoderStore.install(from: source)
+            message = "Installed a local decoder. It is ready for the next conversion."
+            refreshStatus()
+        } catch {
+            message = "Could not install decoder: \(error.localizedDescription)"
+        }
+    }
+
+    private func testDecoder() {
+        isWorking = true
+        defer { isWorking = false }
+        switch LocalDecoderStore.launchTest() {
+        case .success(let result):
+            message = result
+        case .failure(let error):
+            message = "Decoder test failed: \(error.localizedDescription)"
+        }
+        refreshStatus()
+    }
+
+    private func removeDecoder() {
+        isWorking = true
+        defer { isWorking = false }
+        do {
+            try LocalDecoderStore.remove()
+            message = "Removed the local decoder."
+            refreshStatus()
+        } catch {
+            message = "Could not remove decoder: \(error.localizedDescription)"
+        }
+    }
+
+    private func refreshStatus() {
+        isInstalled = LocalDecoderStore.isInstalled
+        onChanged()
+    }
+}
+
+enum LocalDecoderStore {
+    private static let fileName = "mvcdecoder"
+
+    static var directory: URL {
+        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        return base.appendingPathComponent("3D AVC Studio", isDirectory: true)
+    }
+
+    static var url: URL {
+        directory.appendingPathComponent(fileName)
+    }
+
+    static var isInstalled: Bool {
+        FileManager.default.isExecutableFile(atPath: url.path)
+    }
+
+    static var displayLocation: String {
+        url.path.replacingOccurrences(of: NSHomeDirectory(), with: "~")
+    }
+
+    static func install(from source: URL) throws {
+        guard FileManager.default.fileExists(atPath: source.path), !source.hasDirectoryPath else {
+            throw DecoderStoreError.notAFile
+        }
+        guard FileManager.default.isExecutableFile(atPath: source.path) else {
+            throw DecoderStoreError.notExecutable
+        }
+
+        let access = SecurityScopedAccess(source)
+        _ = access
+        let manager = FileManager.default
+        try manager.createDirectory(at: directory, withIntermediateDirectories: true)
+        let temporary = directory.appendingPathComponent(".mvcdecoder-\(UUID().uuidString)")
+        defer { try? manager.removeItem(at: temporary) }
+        try manager.copyItem(at: source, to: temporary)
+        try manager.setAttributes([.posixPermissions: 0o755], ofItemAtPath: temporary.path)
+        try? manager.removeItem(at: url)
+        try manager.moveItem(at: temporary, to: url)
+        guard isInstalled else {
+            throw DecoderStoreError.notExecutable
+        }
+    }
+
+    static func remove() throws {
+        guard FileManager.default.fileExists(atPath: url.path) else { return }
+        try FileManager.default.removeItem(at: url)
+    }
+
+    static func launchTest() -> Result<String, Error> {
+        guard isInstalled else { return .failure(DecoderStoreError.notInstalled) }
+        let process = Process()
+        let nullDevice = URL(fileURLWithPath: "/dev/null")
+        guard let nullHandle = try? FileHandle(forWritingTo: nullDevice) else {
+            return .failure(DecoderStoreError.testUnavailable)
+        }
+        defer { try? nullHandle.close() }
+        process.executableURL = url
+        process.arguments = ["--help"]
+        process.standardOutput = nullHandle
+        process.standardError = nullHandle
+        do {
+            try process.run()
+            let deadline = Date().addingTimeInterval(4)
+            while process.isRunning && Date() < deadline {
+                RunLoop.current.run(until: Date().addingTimeInterval(0.05))
+            }
+            if process.isRunning {
+                process.terminate()
+                process.waitUntilExit()
+                return .failure(DecoderStoreError.testTimedOut)
+            }
+            if process.terminationStatus == 0 {
+                return .success("Decoder launch test passed. It responded to --help.")
+            }
+            return .success("Decoder launched (exit code \(process.terminationStatus)). It is installed; conversion will validate the required decoder interface.")
+        } catch {
+            return .failure(error)
+        }
+    }
+
+    enum DecoderStoreError: LocalizedError {
+        case notAFile, notExecutable, notInstalled, testUnavailable, testTimedOut
+
+        var errorDescription: String? {
+            switch self {
+            case .notAFile: return "Choose a decoder executable file, not a folder."
+            case .notExecutable: return "The selected file is not executable."
+            case .notInstalled: return "No local decoder is installed."
+            case .testUnavailable: return "Could not open the test output device."
+            case .testTimedOut: return "The decoder did not respond within four seconds."
+            }
+        }
     }
 }
 
