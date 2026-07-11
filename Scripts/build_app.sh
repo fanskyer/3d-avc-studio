@@ -15,6 +15,7 @@ COMPLIANCE_RESOURCES="$RESOURCES/Compliance"
 RESEARCH_RESOURCES="$RESOURCES/Research"
 ICONSET_PARENT="$(mktemp -d "$BUILD_DIR/iconset.XXXXXX")"
 ICONSET="$ICONSET_PARENT/3DAVCStudio.iconset"
+STATIC_ICON="$ROOT/App/Resources/3DAVCStudio.icns"
 DEFAULT_DECODER="$ROOT/Vendor/MVCDecoder/mvcdecoder"
 MVC_DECODER_PATH="${MVC_DECODER_PATH:-}"
 CODE_SIGN_IDENTITY="${CODE_SIGN_IDENTITY:--}"
@@ -117,8 +118,12 @@ cp "$ROOT/Scripts/bootstrap_research_decoder.sh" "$RESEARCH_RESOURCES/bootstrap_
 cp "$ROOT/Research/MVCDecoderAdapter/mvcdecoder" "$RESEARCH_RESOURCES/MVCDecoderAdapter/mvcdecoder"
 chmod 644 "$RESEARCH_RESOURCES/bootstrap_research_decoder.sh" "$RESEARCH_RESOURCES/MVCDecoderAdapter/mvcdecoder"
 
-python3 "$ROOT/Scripts/generate_app_icon.py" "$ICONSET"
-iconutil -c icns "$ICONSET" -o "$RESOURCES/3DAVCStudio.icns"
+if [[ -f "$STATIC_ICON" ]]; then
+  cp "$STATIC_ICON" "$RESOURCES/3DAVCStudio.icns"
+else
+  python3 "$ROOT/Scripts/generate_app_icon.py" "$ICONSET"
+  iconutil -c icns "$ICONSET" -o "$RESOURCES/3DAVCStudio.icns"
+fi
 rm -rf "$ICONSET_PARENT"
 
 compile_swift_executable \

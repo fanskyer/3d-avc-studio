@@ -482,7 +482,7 @@ struct Sony3DEngine {
             """
             {
               "engine": "sony3dengine",
-              "version": "0.2.0",
+              "version": "0.2.1",
               "profiles": ["sony-3d-avc", "sony-avchd-3d"],
               "codecs": ["h265-vt"],
               "transportExtractionComplete": true,

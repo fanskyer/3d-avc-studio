@@ -5,6 +5,8 @@ import sys
 import zlib
 from pathlib import Path
 
+from PIL import Image, ImageDraw
+
 
 ICON_SIZES = [
     ("icon_16x16.png", 16),
@@ -136,13 +138,52 @@ def png_chunk(kind, payload):
     return struct.pack(">I", len(payload)) + chunk + struct.pack(">I", zlib.crc32(chunk) & 0xFFFFFFFF)
 
 
+def source_camera():
+    return Path(__file__).resolve().parent.parent / "App" / "Resources" / "3DAVCStudio-camera-chroma.png"
+
+
+def remove_green_background(image):
+    image = image.convert("RGBA")
+    pixels = image.load()
+    for y in range(image.height):
+        for x in range(image.width):
+            red, green, blue, alpha = pixels[x, y]
+            # Keep cyan lens glass; only remove the intentionally vivid green key.
+            if green > 80 and green > red * 1.25 and green > blue * 1.25:
+                pixels[x, y] = (red, green, blue, 0)
+            else:
+                pixels[x, y] = (red, green, blue, alpha)
+    return image
+
+
+def production_icon(size):
+    canvas_size = 1024
+    base = Image.new("RGBA", (canvas_size, canvas_size), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(base)
+    margin = 38
+    radius = 218
+    draw.rounded_rectangle(
+        (margin, margin, canvas_size - margin, canvas_size - margin),
+        radius=radius,
+        fill=(18, 47, 67, 255),
+    )
+    draw.rounded_rectangle(
+        (margin + 20, margin + 20, canvas_size - margin - 20, canvas_size - margin - 20),
+        radius=radius - 20,
+        outline=(99, 185, 203, 130),
+        width=10,
+    )
+
+    camera = remove_green_background(Image.open(source_camera()))
+    camera.thumbnail((930, 930), Image.Resampling.LANCZOS)
+    left = (canvas_size - camera.width) // 2
+    top = (canvas_size - camera.height) // 2 - 8
+    base.alpha_composite(camera, (left, top))
+    return base.resize((size, size), Image.Resampling.LANCZOS)
+
+
 def write_png(path, size):
-    raw = draw_icon(size)
-    png = bytearray(b"\x89PNG\r\n\x1a\n")
-    png += png_chunk(b"IHDR", struct.pack(">IIBBBBB", size, size, 8, 6, 0, 0, 0))
-    png += png_chunk(b"IDAT", zlib.compress(raw, 9))
-    png += png_chunk(b"IEND", b"")
-    path.write_bytes(png)
+    production_icon(size).save(path, "PNG")
 
 
 def main():
