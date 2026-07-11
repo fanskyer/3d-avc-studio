@@ -632,6 +632,7 @@ struct DecoderSetupView: View {
     @State private var message = "No local MVC decoder is installed."
     @State private var isInstalled = LocalDecoderStore.isInstalled
     @State private var isWorking = false
+    @State private var showingResearchInstallConfirmation = false
     let onChanged: () -> Void
 
     var body: some View {
@@ -684,6 +685,12 @@ struct DecoderSetupView: View {
                 .fixedSize(horizontal: false, vertical: true)
 
             HStack {
+                Button {
+                    showingResearchInstallConfirmation = true
+                } label: {
+                    Label("Install Research Decoder...", systemImage: "arrow.down.circle")
+                }
+                .disabled(isWorking)
                 Button("Choose Decoder...") { chooseDecoder() }
                     .disabled(isWorking)
                 Button("Test") { testDecoder() }
@@ -702,6 +709,12 @@ struct DecoderSetupView: View {
             if isInstalled {
                 message = "A local MVC decoder is installed."
             }
+        }
+        .alert("Install Research Decoder?", isPresented: $showingResearchInstallConfirmation) {
+            Button("Install") { installResearchDecoder() }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This downloads h264-tools/JM reference source from GitHub, compiles it locally, and installs the research adapter. It may be subject to third-party patent rights. Continue only if you understand and accept those obligations.")
         }
     }
 
@@ -751,6 +764,24 @@ struct DecoderSetupView: View {
             refreshStatus()
         } catch {
             message = "Could not remove decoder: \(error.localizedDescription)"
+        }
+    }
+
+    private func installResearchDecoder() {
+        isWorking = true
+        message = "Downloading and compiling the local research decoder..."
+        Task.detached(priority: .userInitiated) {
+            let result = Result { try LocalDecoderStore.bootstrapBundledResearchDecoder() }
+            await MainActor.run {
+                isWorking = false
+                switch result {
+                case .success:
+                    message = "Research decoder installed. Test it before converting media."
+                case .failure(let error):
+                    message = "Could not install research decoder: \(error.localizedDescription)"
+                }
+                refreshStatus()
+            }
         }
     }
 
@@ -842,8 +873,48 @@ enum LocalDecoderStore {
         }
     }
 
+    static func bootstrapBundledResearchDecoder() throws {
+        guard let resources = Bundle.main.resourceURL else {
+            throw DecoderStoreError.bootstrapUnavailable
+        }
+        let script = resources.appendingPathComponent("Research/bootstrap_research_decoder.sh")
+        let adapter = resources.appendingPathComponent("Research/MVCDecoderAdapter/mvcdecoder")
+        guard FileManager.default.fileExists(atPath: script.path),
+              FileManager.default.fileExists(atPath: adapter.path) else {
+            throw DecoderStoreError.bootstrapUnavailable
+        }
+
+        let process = Process()
+        let output = Pipe()
+        process.executableURL = URL(fileURLWithPath: "/bin/bash")
+        process.arguments = [script.path]
+        process.standardOutput = output
+        process.standardError = output
+        var environment = ProcessInfo.processInfo.environment
+        environment["SONY3D_RESEARCH_DECODER_WORK"] = researchSupportDirectory.path
+        environment["SONY3D_RESEARCH_ADAPTER_SOURCE"] = adapter.path
+        process.environment = environment
+        try process.run()
+        process.waitUntilExit()
+        let text = String(data: output.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+        guard process.terminationStatus == 0 else {
+            throw DecoderStoreError.bootstrapFailed(Self.conciseBootstrapLog(text))
+        }
+
+        let generatedAdapter = researchSupportDirectory.appendingPathComponent("bin/mvcdecoder")
+        guard FileManager.default.isExecutableFile(atPath: generatedAdapter.path) else {
+            throw DecoderStoreError.bootstrapFailed("The local build did not create mvcdecoder.")
+        }
+        try install(from: generatedAdapter)
+    }
+
     private static var researchSupportDirectory: URL {
         directory.appendingPathComponent("research-decoder", isDirectory: true)
+    }
+
+    private static func conciseBootstrapLog(_ text: String) -> String {
+        let lines = text.split(separator: "\n", omittingEmptySubsequences: true)
+        return lines.suffix(4).joined(separator: " ")
     }
 
     private static func installResearchSupportFiles(for source: URL, manager: FileManager) throws {
@@ -872,7 +943,7 @@ enum LocalDecoderStore {
     }
 
     enum DecoderStoreError: LocalizedError {
-        case notAFile, notExecutable, notInstalled, testUnavailable, testTimedOut
+        case notAFile, notExecutable, notInstalled, testUnavailable, testTimedOut, bootstrapUnavailable, bootstrapFailed(String)
 
         var errorDescription: String? {
             switch self {
@@ -881,6 +952,8 @@ enum LocalDecoderStore {
             case .notInstalled: return "No local decoder is installed."
             case .testUnavailable: return "Could not open the test output device."
             case .testTimedOut: return "The decoder did not respond within four seconds."
+            case .bootstrapUnavailable: return "The bundled research bootstrap is unavailable."
+            case .bootstrapFailed(let detail): return detail
             }
         }
     }

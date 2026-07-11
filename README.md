@@ -31,8 +31,9 @@ local decoder that you are legally allowed to use.
 4. Add `.MTS` or `.M2TS` clips from a Sony 3D AVC / AVCHD 3D camera.
 5. Leave the default settings unless you are testing a specific workflow:
    `H.265 Fast Apple`, `60p`, and source-folder output.
-6. Open `Decoder Setup...`, choose a legally usable MVC decoder, then press
-   `Test`. The app stores its private local copy in Application Support.
+6. Open `Decoder Setup...` and choose `Install Research Decoder...` to download
+   and compile the optional research decoder on your Mac. Review the native
+   legal notice before confirming, then press `Test` when the install finishes.
 
 The Convert button remains disabled until a decoder is installed. The public
 preview does not bundle one, but the setup screen makes its required command
@@ -75,8 +76,9 @@ Build/research-decoder/bin/mvcdecoder
 
 The generated files are not committed, not bundled, and not included in public
 releases. `Build/research-decoder/bin/mvcdecoder` is an adapter that implements
-the app decoder contract using your local `ldecod` build. Open `Decoder Setup...`
-and select that `mvcdecoder` file to install it for local research use.
+the app decoder contract using your local `ldecod` build. The app can download,
+build, and install this research path through `Decoder Setup... -> Install
+Research Decoder...`; the script remains available for terminal-based testing.
 
 ## Build From Source
 

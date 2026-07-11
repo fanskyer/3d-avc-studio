@@ -2,10 +2,16 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-WORK="$ROOT/Build/research-decoder"
+WORK="${SONY3D_RESEARCH_DECODER_WORK:-$ROOT/Build/research-decoder}"
 SRC="$WORK/h264-tools"
 BIN="$WORK/bin"
 REPO="${H264_TOOLS_REPO:-https://github.com/carrardt/h264-tools.git}"
+ADAPTER_SOURCE="${SONY3D_RESEARCH_ADAPTER_SOURCE:-$ROOT/Research/MVCDecoderAdapter/mvcdecoder}"
+
+[[ -f "$ADAPTER_SOURCE" ]] || {
+  echo "Research adapter source is missing: $ADAPTER_SOURCE" >&2
+  exit 1
+}
 
 mkdir -p "$WORK" "$BIN"
 
@@ -69,7 +75,7 @@ for source in "${tool_sources[@]}"; do
   "${common[@]}" "$source" -o "$BIN/$name"
 done
 
-cp "$ROOT/Research/MVCDecoderAdapter/mvcdecoder" "$BIN/mvcdecoder"
+cp "$ADAPTER_SOURCE" "$BIN/mvcdecoder"
 chmod 755 "$BIN/mvcdecoder"
 
 cat >"$WORK/README.txt" <<TEXT

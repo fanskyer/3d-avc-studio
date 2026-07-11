@@ -12,6 +12,7 @@ MACOS="$CONTENTS/MacOS"
 RESOURCES="$CONTENTS/Resources"
 ENGINE_RESOURCES="$RESOURCES/Engine"
 COMPLIANCE_RESOURCES="$RESOURCES/Compliance"
+RESEARCH_RESOURCES="$RESOURCES/Research"
 ICONSET_PARENT="$(mktemp -d "$BUILD_DIR/iconset.XXXXXX")"
 ICONSET="$ICONSET_PARENT/3DAVCStudio.iconset"
 DEFAULT_DECODER="$ROOT/Vendor/MVCDecoder/mvcdecoder"
@@ -99,7 +100,7 @@ compile_swift_executable() {
 }
 
 rm -rf "$BUILD_DIR"/*.app
-mkdir -p "$MACOS" "$RESOURCES" "$ENGINE_RESOURCES" "$COMPLIANCE_RESOURCES"
+mkdir -p "$MACOS" "$RESOURCES" "$ENGINE_RESOURCES" "$COMPLIANCE_RESOURCES" "$RESEARCH_RESOURCES/MVCDecoderAdapter"
 
 compile_swift_executable \
   "$ROOT/App/Sources/ThreeDAVCStudio.swift" \
@@ -112,6 +113,9 @@ cp "$ROOT/App/Resources/Info.plist" "$CONTENTS/Info.plist"
 cp "$ROOT/App/Resources/ThirdPartyNotices.md" "$RESOURCES/ThirdPartyNotices.md"
 cp "$ROOT/App/Resources/PrivacyInfo.xcprivacy" "$RESOURCES/PrivacyInfo.xcprivacy"
 cp "$ROOT/Compliance/decoder_policy.json" "$COMPLIANCE_RESOURCES/decoder_policy.json"
+cp "$ROOT/Scripts/bootstrap_research_decoder.sh" "$RESEARCH_RESOURCES/bootstrap_research_decoder.sh"
+cp "$ROOT/Research/MVCDecoderAdapter/mvcdecoder" "$RESEARCH_RESOURCES/MVCDecoderAdapter/mvcdecoder"
+chmod 644 "$RESEARCH_RESOURCES/bootstrap_research_decoder.sh" "$RESEARCH_RESOURCES/MVCDecoderAdapter/mvcdecoder"
 
 python3 "$ROOT/Scripts/generate_app_icon.py" "$ICONSET"
 iconutil -c icns "$ICONSET" -o "$RESOURCES/3DAVCStudio.icns"
