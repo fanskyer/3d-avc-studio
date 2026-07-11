@@ -24,25 +24,11 @@ trap 'rm -f "$MAIN_ENTITLEMENTS" "$HELPER_ENTITLEMENTS"' EXIT
 
 echo "Entitlements audit: $APP"
 
-if plist_true "$MAIN_ENTITLEMENTS" 'com.apple.security.app-sandbox'; then
-  echo "- Main executable has app sandbox entitlement."
-else
-  echo "- Blocker: main executable is missing app sandbox entitlement."
-  BLOCKERS=$((BLOCKERS + 1))
-fi
-
-if plist_true "$MAIN_ENTITLEMENTS" 'com.apple.security.files.user-selected.read-write'; then
-  echo "- Main executable has user-selected read/write entitlement."
-else
-  echo "- Blocker: main executable is missing user-selected read/write entitlement."
-  BLOCKERS=$((BLOCKERS + 1))
-fi
-
-if grep -q 'com.apple.security.inherit' "$MAIN_ENTITLEMENTS"; then
-  echo "- Blocker: main executable should not use sandbox inheritance."
+if grep -q 'com.apple.security.app-sandbox\|com.apple.security.inherit' "$MAIN_ENTITLEMENTS"; then
+  echo "- Blocker: open-source preview must not sandbox the main executable."
   BLOCKERS=$((BLOCKERS + 1))
 else
-  echo "- Main executable does not use sandbox inheritance."
+  echo "- Main executable is unsandboxed so it can run a user-provided local decoder."
 fi
 
 while IFS= read -r -d '' exe; do
@@ -50,12 +36,11 @@ while IFS= read -r -d '' exe; do
   rel="${exe#$APP/}"
   HELPER_ENTITLEMENTS="$(mktemp)"
   codesign -d --entitlements :- "$exe" >"$HELPER_ENTITLEMENTS" 2>/dev/null || true
-  if plist_true "$HELPER_ENTITLEMENTS" 'com.apple.security.app-sandbox' &&
-     plist_true "$HELPER_ENTITLEMENTS" 'com.apple.security.inherit'; then
-    echo "- Helper executable inherits sandbox: $rel"
-  else
-    echo "- Blocker: helper executable must have app-sandbox and inherit entitlements: $rel"
+  if grep -q 'com.apple.security.app-sandbox\|com.apple.security.inherit' "$HELPER_ENTITLEMENTS"; then
+    echo "- Blocker: helper executable must not use sandbox inheritance: $rel"
     BLOCKERS=$((BLOCKERS + 1))
+  else
+    echo "- Helper executable is unsandboxed for the local decoder workflow: $rel"
   fi
   rm -f "$HELPER_ENTITLEMENTS"
 done < <(find "$APP/Contents" -type f -perm -111 -print0)

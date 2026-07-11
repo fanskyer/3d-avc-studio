@@ -21,7 +21,8 @@ Vendor/MVCDecoder/mvcdecoder
 ```
 
 `Scripts/build_app.sh` copies it into the app bundle before generating engine
-capabilities and signs it with helper sandbox inheritance entitlements.
+capabilities. The open-source preview is intentionally not sandboxed because it
+must be able to run a decoder selected by the user.
 
 Decoder command shape:
 

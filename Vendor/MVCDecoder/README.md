@@ -14,7 +14,8 @@ The build script copies that executable into:
 3D AVC Studio.app/Contents/Resources/Engine/mvcdecoder
 ```
 
-and signs it with helper sandbox inheritance entitlements.
+for the local decoder workflow. The open-source preview is intentionally not
+sandboxed because it must be able to run a decoder selected by the user.
 
 You can also build with a one-off path:
 

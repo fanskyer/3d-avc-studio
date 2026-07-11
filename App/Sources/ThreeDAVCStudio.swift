@@ -647,6 +647,11 @@ struct DecoderSetupView: View {
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
+            Text("Only choose a decoder you trust. Decoder Setup runs the selected executable locally when you test or convert media.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
             VStack(alignment: .leading, spacing: 6) {
                 Text("Required decoder command")
                     .font(.headline)
@@ -692,7 +697,12 @@ struct DecoderSetupView: View {
         }
         .padding(24)
         .frame(width: 620)
-        .onAppear { refreshStatus() }
+        .onAppear {
+            refreshStatus()
+            if isInstalled {
+                message = "A local MVC decoder is installed."
+            }
+        }
     }
 
     private var statusLabel: some View {
@@ -763,7 +773,7 @@ enum LocalDecoderStore {
     }
 
     static var isInstalled: Bool {
-        FileManager.default.isExecutableFile(atPath: url.path)
+        FileManager.default.fileExists(atPath: url.path)
     }
 
     static var displayLocation: String {
@@ -771,11 +781,9 @@ enum LocalDecoderStore {
     }
 
     static func install(from source: URL) throws {
-        guard FileManager.default.fileExists(atPath: source.path), !source.hasDirectoryPath else {
+        let sourceValues = try source.resourceValues(forKeys: [.isRegularFileKey])
+        guard sourceValues.isRegularFile == true else {
             throw DecoderStoreError.notAFile
-        }
-        guard FileManager.default.isExecutableFile(atPath: source.path) else {
-            throw DecoderStoreError.notExecutable
         }
 
         let access = SecurityScopedAccess(source)
@@ -938,12 +946,14 @@ struct EngineStatus {
         let nativeEngine = resources.appendingPathComponent("Engine/sony3dengine")
         let release = releaseFacts(resources: resources)
         if FileManager.default.isExecutableFile(atPath: nativeEngine.path) {
-            let complete = nativeEngineConversionComplete(nativeEngine)
+            let complete = decoderAvailable(resources: resources)
             if complete {
                 return EngineStatus(
-                    title: "Native Engine",
+                    title: LocalDecoderStore.isInstalled ? "Local Decoder Ready" : "Native Engine",
                     icon: "checkmark.seal.fill",
-                    help: "Using bundled native conversion engine.",
+                    help: LocalDecoderStore.isInstalled
+                        ? "Using the local MVC decoder installed through Decoder Setup."
+                        : "Using bundled native conversion engine.",
                     command: .native(nativeEngine),
                     conversionComplete: true,
                     hasBundledDecoder: release.hasBundledDecoder,
@@ -994,27 +1004,16 @@ struct EngineStatus {
         )
     }
 
-    private static func nativeEngineConversionComplete(_ engine: URL) -> Bool {
-        let process = Process()
-        let pipe = Pipe()
-        process.executableURL = engine
-        process.arguments = ["capabilities"]
-        process.standardOutput = pipe
-        process.standardError = Pipe()
-        do {
-            try process.run()
-            process.waitUntilExit()
-        } catch {
-            return false
+    private static func decoderAvailable(resources: URL) -> Bool {
+        if let override = ProcessInfo.processInfo.environment["SONY3D_MVC_DECODER"],
+           FileManager.default.isExecutableFile(atPath: override) {
+            return true
         }
-        guard process.terminationStatus == 0 else {
-            return false
+        if LocalDecoderStore.isInstalled {
+            return true
         }
-        let data = pipe.fileHandleForReading.readDataToEndOfFile()
-        guard let text = String(data: data, encoding: .utf8) else {
-            return false
-        }
-        return text.contains("\"conversionComplete\": true")
+        let bundled = resources.appendingPathComponent("Engine/mvcdecoder")
+        return FileManager.default.isExecutableFile(atPath: bundled.path)
     }
 }
 
@@ -1031,7 +1030,11 @@ enum EngineCommand {
     var environment: [String: String] {
         switch self {
         case .native:
-            return ProcessInfo.processInfo.environment
+            var environment = ProcessInfo.processInfo.environment
+            if LocalDecoderStore.isInstalled {
+                environment["SONY3D_MVC_DECODER"] = LocalDecoderStore.url.path
+            }
+            return environment
         }
     }
 
