@@ -70,11 +70,13 @@ That script downloads and builds h264-tools/JM reference helpers under
 Build/research-decoder/bin/ldecod
 Build/research-decoder/bin/naluparser
 Build/research-decoder/bin/yuvsbspipe
+Build/research-decoder/bin/mvcdecoder
 ```
 
 The generated files are not committed, not bundled, and not included in public
-releases. The reference helper is useful for research and validation, but it is
-not shipped as a product decoder.
+releases. `Build/research-decoder/bin/mvcdecoder` is an adapter that implements
+the app decoder contract using your local `ldecod` build. Open `Decoder Setup...`
+and select that `mvcdecoder` file to install it for local research use.
 
 ## Build From Source
 

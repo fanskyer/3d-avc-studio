@@ -1,0 +1,110 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat <<'TEXT'
+Usage:
+  mvcdecoder decode COMBINED_MVC.h264 LEFT.yuv RIGHT.yuv --width W --height H
+
+Research adapter for a locally-built h264-tools/JM ldecod helper. It decodes
+both MVC views and writes YUV420p left/right files without resampling or
+re-encoding either view.
+TEXT
+}
+
+fail() {
+  echo "mvcdecoder: $*" >&2
+  exit 1
+}
+
+case "${1:-}" in
+  --help|-h)
+    usage
+    exit 0
+    ;;
+  decode)
+    ;;
+  *)
+    usage >&2
+    exit 64
+    ;;
+esac
+[[ "$#" -ge 8 ]] || { usage >&2; exit 64; }
+
+input="$2"
+left="$3"
+right="$4"
+shift 4
+width=""
+height=""
+while [[ "$#" -gt 0 ]]; do
+  case "$1" in
+    --width)
+      [[ "$#" -ge 2 ]] || fail "--width needs a value"
+      width="$2"
+      shift 2
+      ;;
+    --height)
+      [[ "$#" -ge 2 ]] || fail "--height needs a value"
+      height="$2"
+      shift 2
+      ;;
+    --help|-h)
+      usage
+      exit 0
+      ;;
+    *)
+      fail "unknown argument: $1"
+      ;;
+  esac
+done
+
+[[ -f "$input" ]] || fail "input does not exist: $input"
+[[ "$width" =~ ^[0-9]+$ && "$height" =~ ^[0-9]+$ ]] || fail "width and height must be positive integers"
+(( width > 0 && height > 0 && width % 2 == 0 && height % 2 == 0 )) || fail "width and height must be positive even numbers"
+
+script_dir="$(cd "$(dirname "$0")" && pwd)"
+if [[ -n "${SONY3D_LDECOD:-}" ]]; then
+  ldecod="$SONY3D_LDECOD"
+  decoder_cfg="${SONY3D_LDECOD_CONFIG:-}"
+elif [[ -x "$script_dir/ldecod" ]]; then
+  ldecod="$script_dir/ldecod"
+  decoder_cfg="$script_dir/../h264-tools/ldecod/decoder.cfg"
+elif [[ -x "$script_dir/research-decoder/bin/ldecod" ]]; then
+  ldecod="$script_dir/research-decoder/bin/ldecod"
+  decoder_cfg="$script_dir/research-decoder/ldecod/decoder.cfg"
+else
+  fail "could not find local ldecod. Run Scripts/bootstrap_research_decoder.sh first."
+fi
+
+[[ -x "$ldecod" ]] || fail "ldecod is not executable: $ldecod"
+[[ -n "$decoder_cfg" && -f "$decoder_cfg" ]] || fail "decoder.cfg is missing; set SONY3D_LDECOD_CONFIG or rebuild the research decoder"
+
+mkdir -p "$(dirname "$left")" "$(dirname "$right")"
+work="$(mktemp -d "${TMPDIR:-/tmp}/3davc-mvcdecoder.XXXXXX")"
+trap 'rm -rf "$work"' EXIT
+prefix="$work/decoded.yuv"
+
+"$ldecod" \
+  -d "$decoder_cfg" \
+  -p "DecodeAllLayers=1" \
+  -p "InputFile=$input" \
+  -p "OutputFile=$prefix" \
+  -p "Silent=1"
+
+decoded_left="$work/decoded_ViewId0000.yuv"
+decoded_right="$work/decoded_ViewId0001.yuv"
+[[ -f "$decoded_left" && -f "$decoded_right" ]] || fail "ldecod did not produce both MVC view files"
+
+frame_bytes=$((width * height * 3 / 2))
+left_bytes="$(stat -f '%z' "$decoded_left")"
+right_bytes="$(stat -f '%z' "$decoded_right")"
+(( left_bytes >= frame_bytes && right_bytes >= frame_bytes )) || fail "ldecod produced empty MVC view output"
+(( left_bytes % frame_bytes == 0 && right_bytes % frame_bytes == 0 )) || fail "left output is not aligned to YUV420p frames"
+(( right_bytes % frame_bytes == 0 )) || fail "right output is not aligned to YUV420p frames"
+(( left_bytes == right_bytes )) || fail "left/right view frame counts differ"
+
+rm -f "$left" "$right"
+mv "$decoded_left" "$left"
+mv "$decoded_right" "$right"
+printf 'Decoded %d MVC frame(s) with local h264-tools/JM adapter.\n' "$((left_bytes / frame_bytes))"

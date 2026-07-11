@@ -482,7 +482,7 @@ struct Sony3DEngine {
             """
             {
               "engine": "sony3dengine",
-              "version": "0.1.6",
+              "version": "0.1.8",
               "profiles": ["sony-3d-avc", "sony-avchd-3d"],
               "codecs": ["h265-vt"],
               "transportExtractionComplete": true,
@@ -601,20 +601,24 @@ struct Sony3DEngine {
     }
 
     private static func decoderExecutable() -> URL? {
-        if let override = ProcessInfo.processInfo.environment["SONY3D_MVC_DECODER"], !override.isEmpty {
-            let url = URL(fileURLWithPath: override)
-            if FileManager.default.isExecutableFile(atPath: url.path) {
-                return url
+        let environment = ProcessInfo.processInfo.environment
+        let ignoreLocalDecoder = environment["SONY3D_DISABLE_LOCAL_DECODER"] == "1"
+        if !ignoreLocalDecoder {
+            if let override = environment["SONY3D_MVC_DECODER"], !override.isEmpty {
+                let url = URL(fileURLWithPath: override)
+                if FileManager.default.isExecutableFile(atPath: url.path) {
+                    return url
+                }
             }
-        }
 
-        let applicationSupport = FileManager.default.urls(
-            for: .applicationSupportDirectory,
-            in: .userDomainMask
-        ).first?.appendingPathComponent("3D AVC Studio/mvcdecoder")
-        if let applicationSupport,
-           FileManager.default.fileExists(atPath: applicationSupport.path) {
-            return applicationSupport
+            let applicationSupport = FileManager.default.urls(
+                for: .applicationSupportDirectory,
+                in: .userDomainMask
+            ).first?.appendingPathComponent("3D AVC Studio/mvcdecoder")
+            if let applicationSupport,
+               FileManager.default.fileExists(atPath: applicationSupport.path) {
+                return applicationSupport
+            }
         }
 
         let engineURL = URL(fileURLWithPath: CommandLine.arguments[0]).standardizedFileURL

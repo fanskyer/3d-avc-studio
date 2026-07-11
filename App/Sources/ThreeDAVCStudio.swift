@@ -794,6 +794,7 @@ enum LocalDecoderStore {
         defer { try? manager.removeItem(at: temporary) }
         try manager.copyItem(at: source, to: temporary)
         try manager.setAttributes([.posixPermissions: 0o755], ofItemAtPath: temporary.path)
+        try installResearchSupportFiles(for: source, manager: manager)
         try? manager.removeItem(at: url)
         try manager.moveItem(at: temporary, to: url)
         guard isInstalled else {
@@ -802,8 +803,11 @@ enum LocalDecoderStore {
     }
 
     static func remove() throws {
-        guard FileManager.default.fileExists(atPath: url.path) else { return }
-        try FileManager.default.removeItem(at: url)
+        let manager = FileManager.default
+        if manager.fileExists(atPath: url.path) {
+            try manager.removeItem(at: url)
+        }
+        try? manager.removeItem(at: researchSupportDirectory)
     }
 
     static func launchTest() -> Result<String, Error> {
@@ -836,6 +840,35 @@ enum LocalDecoderStore {
         } catch {
             return .failure(error)
         }
+    }
+
+    private static var researchSupportDirectory: URL {
+        directory.appendingPathComponent("research-decoder", isDirectory: true)
+    }
+
+    private static func installResearchSupportFiles(for source: URL, manager: FileManager) throws {
+        let bin = source.deletingLastPathComponent()
+        let researchRoot = bin.deletingLastPathComponent()
+        let ldecod = bin.appendingPathComponent("ldecod")
+        let config = researchRoot.appendingPathComponent("h264-tools/ldecod/decoder.cfg")
+        guard source.lastPathComponent == "mvcdecoder",
+              manager.isExecutableFile(atPath: ldecod.path),
+              manager.fileExists(atPath: config.path) else {
+            return
+        }
+
+        let temporary = directory.appendingPathComponent(".research-decoder-\(UUID().uuidString)", isDirectory: true)
+        defer { try? manager.removeItem(at: temporary) }
+        let temporaryBin = temporary.appendingPathComponent("bin", isDirectory: true)
+        let temporaryConfig = temporary.appendingPathComponent("ldecod", isDirectory: true)
+        try manager.createDirectory(at: temporaryBin, withIntermediateDirectories: true)
+        try manager.createDirectory(at: temporaryConfig, withIntermediateDirectories: true)
+        let temporaryDecoder = temporaryBin.appendingPathComponent("ldecod")
+        try manager.copyItem(at: ldecod, to: temporaryDecoder)
+        try manager.setAttributes([.posixPermissions: 0o755], ofItemAtPath: temporaryDecoder.path)
+        try manager.copyItem(at: config, to: temporaryConfig.appendingPathComponent("decoder.cfg"))
+        try? manager.removeItem(at: researchSupportDirectory)
+        try manager.moveItem(at: temporary, to: researchSupportDirectory)
     }
 
     enum DecoderStoreError: LocalizedError {

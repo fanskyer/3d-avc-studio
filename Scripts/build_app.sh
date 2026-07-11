@@ -140,7 +140,7 @@ if [[ -f "$DECODER_SOURCE" ]]; then
   cp "$DECODER_SOURCE" "$ENGINE_RESOURCES/mvcdecoder"
 fi
 
-"$ENGINE_RESOURCES/sony3dengine" capabilities >"$ENGINE_RESOURCES/capabilities.json"
+SONY3D_DISABLE_LOCAL_DECODER=1 "$ENGINE_RESOURCES/sony3dengine" capabilities >"$ENGINE_RESOURCES/capabilities.json"
 
 while IFS= read -r -d '' helper; do
   codesign \

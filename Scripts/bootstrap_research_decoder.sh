@@ -69,6 +69,9 @@ for source in "${tool_sources[@]}"; do
   "${common[@]}" "$source" -o "$BIN/$name"
 done
 
+cp "$ROOT/Research/MVCDecoderAdapter/mvcdecoder" "$BIN/mvcdecoder"
+chmod 755 "$BIN/mvcdecoder"
+
 cat >"$WORK/README.txt" <<TEXT
 Research decoder helpers built locally.
 
@@ -76,6 +79,7 @@ Generated files:
 - $BIN/ldecod
 - $BIN/naluparser
 - $BIN/yuvsbspipe
+- $BIN/mvcdecoder
 
 Source:
 - $SRC
@@ -85,14 +89,18 @@ The h264-tools/JM notices warn that product use may involve third-party patent
 rights. You are responsible for any decoder, codec, patent, or media-rights
 obligations that apply to your own use.
 
-Current app integration note:
-3D AVC Studio's clean native engine expects a single mvcdecoder executable with
-this contract:
+Current app integration:
+The generated mvcdecoder adapter implements the app decoder contract:
 
   mvcdecoder decode COMBINED_MVC.h264 LEFT.yuv RIGHT.yuv --width W --height H
 
-The raw h264-tools ldecod helper is useful for research and validation, but it
-is not shipped as a public app decoder.
+To use it in the app, open Decoder Setup and choose:
+
+  $BIN/mvcdecoder
+
+The app copies the adapter and its locally-built ldecod/configuration support
+files into Application Support. They remain user-installed local research
+dependencies and are never bundled into a public release artifact.
 TEXT
 
 echo
