@@ -1,0 +1,60 @@
+name: Bug report
+description: Report a reproducible conversion, decoder, or app problem.
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please do not attach private family video. Start with diagnostics, clip metadata, and the exact error text.
+  - type: input
+    id: app_version
+    attributes:
+      label: App version
+      placeholder: "0.2.1"
+    validations:
+      required: true
+  - type: input
+    id: macos_version
+    attributes:
+      label: macOS version and Mac model
+      placeholder: "macOS 15.5, MacBook Pro M3"
+    validations:
+      required: true
+  - type: input
+    id: camera_model
+    attributes:
+      label: Camera model
+      placeholder: "Sony HDR-TD10"
+    validations:
+      required: true
+  - type: dropdown
+    id: decoder
+    attributes:
+      label: Decoder setup
+      options:
+        - In-app Research Decoder
+        - User-provided decoder
+        - No decoder installed
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: "1. Add clip\n2. Choose source-folder output\n3. Convert"
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected and actual result
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics or error text
+      description: Use Save Diagnostics or paste the relevant log lines. Remove names and paths if needed.
+    validations:
+      required: true

@@ -40,6 +40,10 @@ preview does not bundle one, but the setup screen makes its required command
 shape visible and installs a user-supplied decoder without asking the user to
 set an environment variable or rebuild the app.
 
+![3D AVC Studio main window](Docs/Media/main-window.jpeg)
+
+![Decoder Setup with Research Decoder installed](Docs/Media/decoder-setup.jpeg)
+
 ## Running The App
 
 - `Choose Files`: add one or more `.MTS` / `.M2TS` clips.
@@ -55,6 +59,14 @@ set an environment variable or rebuild the app.
 Ordinary 2D AVCHD clips are skipped because they do not contain the dependent
 MVC view. Sony 3D AVC / AVCHD 3D clips should contain both the base AVC stream
 and the dependent MVC stream.
+
+## Compatibility And Feedback
+
+The current real-world validation target is Sony HDR-TD10 footage. Other Sony
+3D AVC / AVCHD 3D cameras may work, but are not promised yet. Please use the
+GitHub issue forms for a bug report or compatibility result. Include the camera
+model, macOS version, app version, and local diagnostics. Do not upload private
+video unless you deliberately choose to share a short, non-sensitive sample.
 
 ## Research Decoder Bootstrap
 

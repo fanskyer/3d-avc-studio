@@ -1,0 +1,48 @@
+name: Camera compatibility report
+description: Share a successful or unsuccessful Sony 3D AVC / AVCHD 3D test.
+title: "[Compatibility]: "
+labels: [compatibility]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Successful reports are just as useful as failures. Do not attach private footage.
+  - type: input
+    id: camera_model
+    attributes:
+      label: Camera model
+      placeholder: "Sony HDR-TD10"
+    validations:
+      required: true
+  - type: input
+    id: app_version
+    attributes:
+      label: App version and macOS version
+      placeholder: "3D AVC Studio 0.2.1 on macOS 15.5"
+    validations:
+      required: true
+  - type: dropdown
+    id: result
+    attributes:
+      label: Result
+      options:
+        - Conversion succeeded
+        - Input was recognized but conversion failed
+        - Input was skipped as non-MVC / 2D
+        - I am unsure
+    validations:
+      required: true
+  - type: textarea
+    id: clip_details
+    attributes:
+      label: Clip details
+      placeholder: "Extension, resolution, frame rate, and approximate duration."
+    validations:
+      required: true
+  - type: textarea
+    id: playback
+    attributes:
+      label: Playback result
+      placeholder: "Where you checked the SBS output and whether left/right eyes, sync, and audio looked correct."
+    validations:
+      required: true
